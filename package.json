@@ -1,0 +1,14 @@
+{
+    "name": "wishbone",
+    "description": "A dead simple rest framework for Node built on top of Backbone.js",
+    "author": "Adam Savitzky <asavitzky@forio.com>",
+    "dependencies": {
+        "underscore": ">= 1.3.3",
+        "backbone": ">= 0.9.2",
+        "mongodb": ">= 1.1.2",
+        "jquery": ">= 1.7.3"
+    },
+    "engine": "node 0.8.6",
+    "version": "0.0.1"
+}
+
