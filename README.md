@@ -1,6 +1,8 @@
-# Wishbone
+=======
+Wishbone
+========
 
-Wishbone is a dead simple rest API framework for Node.js that uses backbone and MongoDB.
+A dead simple way to create RESTful APIs in Node.js. Built on top of MongoDB using Backbone.js.
 
 ## Installation
 `npm install -g wishbone`
@@ -50,3 +52,4 @@ http.createServer(app).listen(app.get('port'), function(){
   console.log("Express server listening on port " + app.get('port'));
 });
 ```
+
