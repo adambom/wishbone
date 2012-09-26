@@ -178,9 +178,62 @@
         };
 
         Router.extend = extend;
+        
+        var dbConstructor = function (cfg) {
+
+            var defaults = {
+                hostname: 'localhost',
+                port: 27017,
+                db: 'test',
+                username: '',
+                password: ''
+            };
+
+            cfg = _.extend(defaults, _.clone(cfg));
+
+            cfg.url = function () {
+                if (cfg.username && cfg.password) {
+                    return 'mongodb://' + cfg.username + ':' + cfg.password + '@' + cfg.hostname + ':' + cfg.port + '/' + cfg.db;
+                }
+
+                return 'mongodb://' + cfg.hostname + ':' + cfg.port + '/' + cfg.db;
+            };
+
+            return cfg;
+
+        };
+        
+        var db, app;
+        
         var proto = $.extend(true, {}, Backbone);
 
         return _.extend(Backbone, {
+            
+            start: function (config) {
+                db = dbConstructor(config.db);
+                
+                var express = require('express'),
+                    http = require('http'),
+                    path = require('path');
+                    
+                app = express();
+                
+                app.configure(function(){
+                    app.set('port', process.env.PORT || 3000);
+                    app.use(express.logger('dev'));
+                    app.use(express.bodyParser());
+                    app.use(express.methodOverride());
+                    app.use(express.cookieParser('your secret here'));
+                    app.use(express.session());
+                    app.use(app.router);
+                    app.use(express.static(path.join(__dirname, 'public')));
+                });
+                
+                http.createServer(app).listen(app.get('port'), function(){
+                  console.log("Wishbone is listening on port " + app.get('port'));
+                });
+                
+            },
 
             sync: function (method, collection, options) {
                 method = _.bind(methodMap[method], this);
@@ -193,6 +246,75 @@
             },
 
             Router: Router,
+            
+            BaseAPI: function (namespace) {
+                var Collection = Wishbone.Collection.extend({
+                    name: namespace,
+
+                    model: Wishbone.Model,
+
+                    initialize: function () {
+                        this.on('read:success', this.onReadSuccess, this);
+                        this.on('create:success', this.onCreateSuccess, this);
+                    },
+
+                    onReadSuccess: function () {
+                        this.res.end(JSON.stringify(this.toJSON()));
+                    },
+
+                    onCreateSuccess: function (result) {
+                        this.res.end(JSON.stringify(result));
+                    }
+                });
+
+                var routes = {};
+
+                routes['GET api/' + namespace + '/:id?'] = 'read';
+                routes['POST api/' + namespace] = 'create';
+                routes['PUT api/' + namespace + '/:id'] = 'update';
+                routes['DELETE api/' + namespace + '/:id?'] = 'remove';
+
+                var Api = Wishbone.Router.extend({
+
+                    app: app,
+
+                    name : namespace,
+
+                    routes: routes,
+
+                    initialize: function () {
+                        this.collection = new Collection();
+                        this.collection.app = app;
+                        this.collection.url = db.url();
+                    },
+
+                    create: function (req, res) {
+                        this.collection.create(req.body, {
+                            req: req,
+                            res: res
+                        });
+                    },
+
+                    read: function (req, res) {
+                        this.collection.fetch({
+                            id : req.params.id, 
+                            req: req,
+                            res: res
+                        });
+                    },
+
+                    update: function (id) {
+
+                    },
+
+                    delete: function (id) {
+
+                    }
+
+                });
+
+                return new Api();
+            },
 
             Collection: Backbone.Collection.extend({
 
