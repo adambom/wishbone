@@ -209,7 +209,7 @@
 
         return _.extend(Backbone, {
             
-            start: function (config) {
+            configure: function (config) {
                 db = dbConstructor(config.db);
                 
                 var express = require('express'),
@@ -228,7 +228,9 @@
                     app.use(app.router);
                     app.use(express.static(path.join(__dirname, 'public')));
                 });
-                
+            },
+            
+            start: function () {
                 http.createServer(app).listen(app.get('port'), function(){
                   console.log("Wishbone is listening on port " + app.get('port'));
                 });
@@ -248,6 +250,8 @@
             Router: Router,
             
             BaseAPI: function (namespace) {
+                console.log(app);
+                
                 var Collection = Wishbone.Collection.extend({
                     name: namespace,
 
