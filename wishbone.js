@@ -213,7 +213,6 @@
                 db = dbConstructor(config.db);
                 
                 var express = require('express'),
-                    http = require('http'),
                     path = require('path');
                     
                 app = express();
@@ -231,6 +230,8 @@
             },
             
             start: function () {
+                var http = require('http');
+                
                 http.createServer(app).listen(app.get('port'), function(){
                   console.log("Wishbone is listening on port " + app.get('port'));
                 });
@@ -250,8 +251,6 @@
             Router: Router,
             
             BaseAPI: function (namespace) {
-                console.log(app);
-                
                 var Collection = Wishbone.Collection.extend({
                     name: namespace,
 
