@@ -115,7 +115,7 @@
 
             update: function (url) {
                 var that = this,
-                    id = this.id;
+                    id = this._id;
 
                 mongo.connect(url, function (err, conn) {
 
@@ -368,7 +368,7 @@
                     this.res = options.res;
                     this.req = options.req;
                     this.next = options.next;
-
+                    
                     proto.Collection.prototype.create.call(this, model, options);
                 },
 
@@ -399,6 +399,10 @@
 
                 url: function () {
                     return this.collection.url;
+                },
+                
+                isNew: function() {
+                  return !this._id;
                 },
 
                 save: function (key, value, options) {
