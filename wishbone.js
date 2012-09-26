@@ -230,6 +230,10 @@
             },
             
             start: function () {
+                if (!db) {
+                    db = Wishbone.configure();
+                }
+                
                 var http = require('http');
                 
                 http.createServer(app).listen(app.get('port'), function(){
