@@ -2,6 +2,8 @@
     var _ = require('underscore'),
         Backbone = require('backbone'),
         mongo = require('mongodb'),
+        Db = mongo.Db,
+        Server = mongo.Server,
         $ = require('jquery'),
         ObjectID = mongo.ObjectID,
         root = this;
@@ -102,13 +104,9 @@
                     that.collection.trigger('create:success', result);
                 };
 
-                mongo.connect(url, function (err, conn) {
+                this.collection.db.collection(this.collection.name, function (err, coll) {
 
-                    conn.collection(that.collection.name, function (err, coll) {
-
-                        coll.insert(that.toJSON(), onComplete);
-
-                    });
+                    coll.insert(that.toJSON(), {safe:true}, onComplete);
 
                 });
             },
@@ -117,15 +115,11 @@
                 var that = this,
                     id = this._id;
 
-                mongo.connect(url, function (err, conn) {
+                this.collection.db.collection(that.get('name'), function (err, coll) {
 
-                    conn.collection(that.get('name'), function (err, coll) {
-
-                        if (id) {
-                            coll.update({ '_id' : new ObjectID(id) }, that.toJSON());
-                        }
-
-                    });
+                    if (id) {
+                        coll.update({ '_id' : new ObjectID(id) }, that.toJSON());
+                    }
 
                 });
             },
@@ -134,12 +128,8 @@
                 var that = this,
                     id = this.id;
 
-                mongo.connect(url, function (err, conn) {
-
-                    conn.collection(that.get('name'), function (err, coll) {
+                this.collection.db.collection(that.get('name'), function (err, coll) {
                         coll.remove({ '_id' : id });
-                    });
-
                 });
             },
 
@@ -156,23 +146,20 @@
                         suc();
                     };
 
-                mongo.connect(url, function (err, conn) {
+                this.db.collection(name, function (err, coll) {
 
-                    conn.collection(name, function (err, coll) {
+                    if (id) {
 
-                        if (id) {
+                        coll.findOne({ '_id' : new ObjectID(id) }, onRead);
 
-                            coll.findOne({ '_id' : new ObjectID(id) }, onRead);
+                    } else {
 
-                        } else {
+                        coll.find().toArray(onRead);
 
-                            coll.find().toArray(onRead);
-
-                        }
-
-                    });
+                    }
 
                 });
+
             }
 
         };
@@ -226,6 +213,12 @@
                     app.use(express.session());
                     app.use(app.router);
                     app.use(express.static(path.join(__dirname, 'public')));
+                });
+                
+                app.all('/*', function(req, res, next) {
+                  res.header("Access-Control-Allow-Origin", "*");
+                  res.header("Access-Control-Allow-Headers", "X-Requested-With");
+                  next();
                 });
             },
             
@@ -290,9 +283,21 @@
                     routes: routes,
 
                     initialize: function () {
+                        var that = this;
+                        
                         this.collection = new Collection();
                         this.collection.app = app;
                         this.collection.url = db.url();
+                        this.collection.server = new Server(db.hostname, db.port, {auto_reconnect: true});
+                        this.collection.db = new Db(db.db, this.collection.server);
+                        
+                        this.collection.db.open(function(err, d) {
+                            if(!err) {
+                                console.log('Connected to ' + db.db);
+                                
+                                d.createCollection(that.name, function(err, collection) {});
+                            }
+                        });
                     },
 
                     create: function (req, res) {
