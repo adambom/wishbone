@@ -35,10 +35,6 @@ var Router = Backbone.Router.extend({
         this.crud.delete(req.params.id, _.bind(this.responder.trigger, this.responder));
     },
     
-    cors: function (req, res, next) {
-        next();
-    },
-    
     all: function (req, res, next) {
         res.header("Access-Control-Allow-Origin", "*");
         res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS"); 
