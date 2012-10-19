@@ -1,9 +1,9 @@
 (function () {
+    
+    /*
     var _ = require('underscore'),
         Backbone = require('backbone'),
         mongo = require('mongodb'),
-        Db = mongo.Db,
-        Server = mongo.Server,
         $ = require('jquery'),
         ObjectID = mongo.ObjectID,
         root = this;
@@ -87,7 +87,7 @@
                         method = parts.shift().toLowerCase(),
                         path = parts.shift(),
                         fn = this[handler] || function () {};
-                    //console.log(_);
+                    console.log(method, path);
                     this.app[method]('/' + path, _.bind(fn, this));
                 }, this);
 
@@ -104,22 +104,30 @@
                     that.collection.trigger('create:success', result);
                 };
 
-                this.collection.db.collection(this.collection.name, function (err, coll) {
+                mongo.connect(url, function (err, conn) {
 
-                    coll.insert(that.toJSON(), {safe:true}, onComplete);
+                    conn.collection(that.collection.name, function (err, coll) {
+
+                        coll.insert(that.toJSON(), onComplete);
+
+                    });
 
                 });
             },
 
             update: function (url) {
                 var that = this,
-                    id = this._id;
+                    id = this.id;
 
-                this.collection.db.collection(that.get('name'), function (err, coll) {
+                mongo.connect(url, function (err, conn) {
 
-                    if (id) {
-                        coll.update({ '_id' : new ObjectID(id) }, that.toJSON());
-                    }
+                    conn.collection(that.get('name'), function (err, coll) {
+
+                        if (id) {
+                            coll.update({ '_id' : new ObjectID(id) }, { $set : that.toJSON() });
+                        }
+
+                    });
 
                 });
             },
@@ -128,8 +136,12 @@
                 var that = this,
                     id = this.id;
 
-                this.collection.db.collection(that.get('name'), function (err, coll) {
+                mongo.connect(url, function (err, conn) {
+
+                    conn.collection(that.get('name'), function (err, coll) {
                         coll.remove({ '_id' : id });
+                    });
+
                 });
             },
 
@@ -146,20 +158,23 @@
                         suc();
                     };
 
-                this.db.collection(name, function (err, coll) {
+                mongo.connect(url, function (err, conn) {
 
-                    if (id) {
+                    conn.collection(name, function (err, coll) {
 
-                        coll.findOne({ '_id' : new ObjectID(id) }, onRead);
+                        if (id) {
 
-                    } else {
+                            coll.findOne({ '_id' : new ObjectID(id) }, onRead);
 
-                        coll.find().toArray(onRead);
+                        } else {
 
-                    }
+                            coll.find().toArray(onRead);
+
+                        }
+
+                    });
 
                 });
-
             }
 
         };
@@ -178,16 +193,10 @@
 
             cfg = _.extend(defaults, _.clone(cfg));
 
-            cfg.url = function () {
-                if (cfg.username && cfg.password) {
-                    return 'mongodb://' + cfg.username + ':' + cfg.password + '@' + cfg.hostname + ':' + cfg.port + '/' + cfg.db;
-                }
-
-                return 'mongodb://' + cfg.hostname + ':' + cfg.port + '/' + cfg.db;
-            };
-
-            return cfg;
-
+            var server = new mongo.Server('localhost', 27017, {auto_reconnect: true});
+            var db = new mongo.Db('exampleDb', server);
+            
+            return db;
         };
         
         var db, app;
@@ -214,18 +223,18 @@
                     app.use(app.router);
                     app.use(express.static(path.join(__dirname, 'public')));
                 });
-                
-                app.all('/*', function(req, res, next) {
-                  res.header("Access-Control-Allow-Origin", "*");
-                  res.header("Access-Control-Allow-Headers", "X-Requested-With");
-                  next();
-                });
             },
             
             start: function () {
                 if (!db) {
-                    db = Wishbone.configure();
+                    Wishbone.configure();
                 }
+                
+                db.open(function(err, db) {
+                    if(!err) {
+                        console.log("DB opened");
+                    }
+                });
                 
                 var http = require('http');
                 
@@ -268,11 +277,14 @@
                 });
 
                 var routes = {};
-
+                
+                routes['ALL api/' + namespace + '/:id?'] = 'cors';
+                routes['OPTIONS api/' + namespace + '/:id?'] = 'options';
                 routes['GET api/' + namespace + '/:id?'] = 'read';
                 routes['POST api/' + namespace] = 'create';
                 routes['PUT api/' + namespace + '/:id'] = 'update';
                 routes['DELETE api/' + namespace + '/:id?'] = 'remove';
+                
 
                 var Api = Wishbone.Router.extend({
 
@@ -283,21 +295,9 @@
                     routes: routes,
 
                     initialize: function () {
-                        var that = this;
-                        
                         this.collection = new Collection();
                         this.collection.app = app;
                         this.collection.url = db.url();
-                        this.collection.server = new Server(db.hostname, db.port, {auto_reconnect: true});
-                        this.collection.db = new Db(db.db, this.collection.server);
-                        
-                        this.collection.db.open(function(err, d) {
-                            if(!err) {
-                                console.log('Connected to ' + db.db);
-                                
-                                d.createCollection(that.name, function(err, collection) {});
-                            }
-                        });
                     },
 
                     create: function (req, res) {
@@ -307,7 +307,7 @@
                         });
                     },
 
-                    read: function (req, res) {
+                    read: function (req, res, next) {
                         this.collection.fetch({
                             id : req.params.id, 
                             req: req,
@@ -315,12 +315,41 @@
                         });
                     },
 
-                    update: function (id) {
-
+                    update: function (req, res, next) {
+                        var id = req.params && req.params.id,
+                            that = this;
+                        
+                        this.collection.fetch({
+                            id : req.params.id, 
+                            req: req,
+                            res: res,
+                            success: function (collection, response) {
+                                if (!collection.length) {
+                                    that.create(req, res);
+                                }
+                            }
+                        });
                     },
 
                     delete: function (id) {
 
+                    },
+                    
+                    cors: function (req, res, next) {
+                        console.log('all');
+                        res.header("Access-Control-Allow-Origin", "*");
+                        res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS"); 
+                        res.header("Access-Control-Allow-Headers", "content-type, accept");
+                        
+                        next();
+                    },
+                    
+                    options: function (req, res, next) {
+                        res.header("Access-Control-Allow-Origin", "*");
+                        res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS"); 
+                        res.header("Access-Control-Allow-Headers", "content-type, accept");
+                        
+                        next();
                     }
 
                 });
@@ -373,7 +402,7 @@
                     this.res = options.res;
                     this.req = options.req;
                     this.next = options.next;
-                    
+
                     proto.Collection.prototype.create.call(this, model, options);
                 },
 
@@ -404,10 +433,6 @@
 
                 url: function () {
                     return this.collection.url;
-                },
-                
-                isNew: function() {
-                  return !this._id;
                 },
 
                 save: function (key, value, options) {
@@ -446,18 +471,49 @@
 
         });
     }());
+    */
+
+    var _ = require('underscore'),
+        Backbone = require('backbone'),
+        http = require('http'),
+        Database = require('./database'),
+        App = require('./app'),
+        ApiFactory = require('./api-factory');
     
-    
-    // Export the Wishbone object for **Node.js**, with
-    // backwards-compatibility for the old `require()` API.
-    if (typeof exports !== 'undefined') {
-        if (typeof module !== 'undefined' && module.exports) {
-            exports = module.exports = Wishbone;
-        }
+    var Wishbone = (function () {
+        var that = this;
         
-        exports._ = _;
-    } else {
-        root.Wishbone = Wishbone;
-    }
+        return {
+            
+            API: new ApiFactory(that),
+            
+            initialize: function (options) {
+                if (!options) {
+                    options = {};
+                }
+                
+                that.db = new Database(options.db);
+
+                that.app = new App(options.app);
+            },
+            
+            start: function () {
+                that.db.open(function(err, db) {
+                    if(!err) {
+                        console.log("Conncected to database");
+                    } else {
+                        console.log("Error:");
+                    }
+                });
+                
+                require('http').createServer(that.app).listen(that.app.get('port'), function(){
+                  console.log("Wishbone is listening on port " + that.app.get('port'));
+                });
+            }
+        };
+        
+    }());
+    
+    module.exports = Wishbone;
 
 }());
