@@ -45,6 +45,9 @@ var Wishbone = require('wishbone');
 Wishbone.initialize({
     db: {
         db: 'db'
+    },
+    app : {
+        path: 'path-to-my-public-files'
     }
 });
 
