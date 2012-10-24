@@ -54,11 +54,15 @@ Crud.prototype.update = function (id, doc, cb) {
 
 Crud.prototype.delete = function (id, cb) {
     var code = '201';
+    
+    if (id) {
+        id = new mongo.ObjectID(id);
+    }
 
     if (id) {
         this.collection.remove({ _id : id });
     } else {
-        this.collection.remove(onComplete);
+        this.collection.remove();
     }
     
     cb(code);
