@@ -45,8 +45,6 @@ Crud.prototype.update = function (id, doc, cb) {
     
     id = new mongo.ObjectID(id);
     
-    delete doc._id;
-    
     this.collection.update({ _id : id }, { $set : doc }, true);
     
     cb(code, doc);
