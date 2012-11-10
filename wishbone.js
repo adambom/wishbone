@@ -4,27 +4,31 @@
         http = require('http'),
         Database = require('./database'),
         App = require('./app'),
-        ApiFactory = require('./api-factory');
+        Controller = require('./controller');
     
     var Wishbone = (function () {
         var that = this;
         
         return {
             
-            API: new ApiFactory(that),
-            
             initialize: function (options) {
                 if (!options) {
                     options = {};
                 }
                 
-                that.db = new Database(options.db);
+                this.db = new Database(options.db);
+                this.server = new App(options.server);
 
-                that.app = new App(options.app);
+                this.Controller = Controller.extend({
+                    db: this.db,
+                    server: this.server
+                });
             },
             
             start: function () {
-                that.db.open(function(err, db) {
+                var that = this;
+                
+                this.db.open(function(err, db) {
                     if(!err) {
                         console.log("Conncected to database");
                     } else {
@@ -32,8 +36,8 @@
                     }
                 });
                 
-                require('http').createServer(that.app).listen(that.app.get('port'), function(){
-                  console.log("Wishbone is listening on port " + that.app.get('port'));
+                require('http').createServer(this.server).listen(this.server.get('port'), function(){
+                    console.log("Wishbone is listening on port " + that.server.get('port'));
                 });
             }
         };

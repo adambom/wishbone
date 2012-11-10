@@ -13,8 +13,7 @@
     "path": ">= 0.4.9"
   },
   "engine": "node 0.8.6",
-  "version": "0.0.15",
-  "readme": "=======\nWishbone\n========\n\nA dead simple way to create RESTful APIs in Node.js. Built on top of MongoDB using Backbone.js and Express.\n\nWishbone was created with the intent of making it easy for front-end developers to quickly and \npainlessly bootstrap web applications. Wishbone makes it simple to create basic CRUD applications with only\na few lines of code. Wishbone leverages the powerful (and often overlooked) object relational model\nthat backbone provides in order to abstract away the nitty gritty of using the MongoDB API.\n\nIf you want to get started quickly, you can use the BaseAPI class by passing in a namespace. Wishbone takes care\nof the rest. All you should have to do is hit the api at the appropriate namespace using GET, POST, or PUT.\n\nFor example:\n\n`curl -v -H \"Accept: application/json\" -H \"Content-type: application/json\" -X POST -d '{\"name\":\"San Francisco\", \"state\":\"CA\"}' http://localhost:3000/api/locations`\n\nWill insert a document into the locations collection, provided that I have created an API endpoint for locations.\n\nIt's easy to set up simple CRUD like this, but Wishbone also exposes an API that allows you to define your own routes and \ncallbacks. Routing is done using Backbone, so you never have to interact with express.\n\nIf you're looking for CRUD with minimal setup, look no further.\n\n## Installation\n`npm install -g wishbone`\n\n## Usage\n1. Fire up mongodb: `sudo mongod`\n2. `require('wishbone')`\n3. Write your code\n\n```javascript\nvar Wishbone = require('wishbone');\n\nWishbone.configure({\n    db: {\n        db: 'db'\n    }\n});\n\nvar locationsAPI = new Wishbone.BaseAPI('locations');\nvar peopleAPI = new Wishbone.BaseAPI('people');\n\nWishbone.start();\n```\n\n",
-  "_id": "wishbone@0.0.13",
+  "version": "0.1.0",
+  "_id": "wishbone@0.1.0",
   "_from": "wishbone"
 }
