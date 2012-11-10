@@ -46,15 +46,21 @@ Wishbone.initialize({
     db: {
         db: 'db'
     },
-    app : {
+    server : {
         path: 'path-to-my-public-files'
     }
 });
 
 // Instantiate some new APIs. The string you pass in will be the namespace
 // e.g. http://localhost:3000/api/locations
-var locationsAPI = new Wishbone.API('locations');
-var peopleAPI = new Wishbone.API('people');
+var locationsAPI = new Wishbone.Controller({
+    resource: 'locations',
+    prefix: 'api'
+});
+var peopleAPI = new Wishbone.Controller({
+    resource: 'people',
+    prefix: 'api'
+});
 
 // Start the Wishbone server. Do this once all your setup is complete
 Wishbone.start();
