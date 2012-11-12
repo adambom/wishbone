@@ -92,9 +92,13 @@ _.extend(Controller.prototype, {
     update: function (request, response, next) {
         var id = new mongo.ObjectID(request.params.id),
             doc = request.body;
-            
+        
+        delete doc._id;
+           
         this.collection.update({ _id : id }, { $set : doc }, true);
-
+        
+        doc._id = request.params.id;
+        
         this.respondWith('201', doc);
     },
 
