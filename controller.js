@@ -1,4 +1,5 @@
-var _ = require('underscore');
+var _ = require('underscore'),
+    mongo = require('mongodb');
 
 var noop = function () {};
 
@@ -44,8 +45,8 @@ _.extend(Controller.prototype, {
                 verb = parts.shift().toLowerCase(),
                 route = parts.shift(),
                 callback = _.bind(this[handler] || noop, this);
-
-            this.server[verb]((this.prefix ? '/' + this.prefix : '') + '/' + this.resource + route || '', callback);
+                
+            this.server[verb]((this.prefix ? '/' + this.prefix : '') + '/' + this.resource + (route || ''), callback);
         }, this);
     },
     
@@ -60,7 +61,7 @@ _.extend(Controller.prototype, {
     initialize: noop,
 
     create: function (request, response, next) {
-        var record = _.extend(response.body, {
+        var record = _.extend(request.body, {
             _id: new mongo.ObjectID()
         });
         
